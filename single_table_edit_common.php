@@ -75,7 +75,7 @@ function view_row($link,$tname,$pk,$header='no')
 		}
 		else
 		{
-			echo '<td><pre>'.$v.'</pre></td>';
+			echo '<td><pre>'.htmlentities($v).'</pre></td>';
 		}
 	}
 	echo '</tr>';
@@ -758,6 +758,16 @@ function file_to_str($link,$file)
 	{
 		return false;
 	}
+}
+
+function show_source_button($link_element_id,$my_value)
+{
+	$element_id='source_for_'.$link_element_id;
+	echo '<button onclick="sync_with_that(this,\''.$link_element_id.'\')"
+				type=button
+				class="btn btn-sm btn-outline-dark  no-gutters align-top"
+				id=\''.$element_id.'\' 
+				value=\''.$my_value.'\'>'.$my_value.'</button>';
 }
 
 ?>
