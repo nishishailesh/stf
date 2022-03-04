@@ -6,5 +6,5 @@ read password
 mysqldump  -d -h127.0.0.1 -u$user -p$password stf > stf_blank.sql 
 git add *
 git commit -a
-git push https://github.com/nishishailesh/stf
+git push https://github.com/nishishailesh/stf master
 
