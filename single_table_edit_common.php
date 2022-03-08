@@ -62,7 +62,6 @@ function view_row($link,$tname,$pk,$header='no')
 		{
 			echo '
 			<td>';
-		
 				ste_id_edit_button($link,$tname,$v);
 				ste_id_delete_button($link,$tname,$v);
 			echo '<span class="round round-0 bg-warning" >'.$v.'</span></td>';
@@ -75,7 +74,25 @@ function view_row($link,$tname,$pk,$header='no')
 		}
 		else
 		{
-			echo '<td><pre>'.htmlentities($v).'</pre></td>';
+			echo '<td>';
+			$fspec=get_field_spec($link,$tname,$k);
+			if($fspec['ftype']=='dtable')
+			{
+				$sql='select 
+					distinct `'.$fspec['field'].'` , 
+					concat_ws("|",'.$fspec['field_description'].') as description
+				from `'.$fspec['table'].'` where id=\''.$v.'\'';
+				//echo $sql;
+				$result=run_query($link,$GLOBALS['database'],$sql);
+				$ar=get_single_row($result);
+				//mk_select_from_sql_with_description($link,$sql,
+				//	$fspec['field'],$fspec['fname'],$fspec['fname'],'',$v,$blank='yes');
+			echo '<pre>'.$ar['description'].'('.htmlentities($v).')</pre></td>';
+			}
+			else
+			{
+				echo '<pre>'.htmlentities($v).'</pre></td>';
+			}
 		}
 	}
 	echo '</tr>';
@@ -185,6 +202,8 @@ function select($link,$tname,$join='and')
 	//echo '<pre>';print_r($_POST);echo '</pre>';	
 	$sql='select id from `'.$tname.'` where ';
 	$w='';
+	$ord=' order by ';
+	$ord_base_len=strlen($ord);
 	foreach($_POST  as $k=>$v)
 	{
 		if(!in_array($k,array('action','tname','session_name')))
@@ -192,9 +211,13 @@ function select($link,$tname,$join='and')
 			if(strlen($v)>0)
 			{
     			$w=$w.' `'.$k.'` like \'%'.$v.'%\' '.$join.' ';
+				$ord=$ord.' `'.$k.'` , ';
 			}
 		}
 	}
+	
+	if(strlen($ord)>$ord_base_len){$ord=substr($ord,0,-2);}
+	else{$ord='';}
 	
 	if(strlen($w)>0)
 	{
@@ -210,7 +233,8 @@ function select($link,$tname,$join='and')
 	}
 	else
 	{
-		$sql='select id from `'.$tname.'` order by id desc limit '.$GLOBALS['all_records_limit'];
+		//$sql='select id from `'.$tname.'` order by id desc limit '.$GLOBALS['all_records_limit'];
+		$sql='select id from `'.$tname.'` '.$ord.' limit '.$GLOBALS['all_records_limit'];
 	}
 	
 	//echo $sql;
@@ -456,6 +480,16 @@ function read_field($link,$tname,$field,$value,$search='no')
 		if($fspec['ftype']=='table')
 		{
 			mk_select_from_sql($link,'select distinct `'.$fspec['field'].'` from `'.$fspec['table'].'`',
+					$fspec['field'],$fspec['fname'],$fspec['fname'],'',$value,$blank='yes');
+		}
+		else if($fspec['ftype']=='dtable')
+		{
+			$sql='select 
+				distinct `'.$fspec['field'].'` , 
+				concat_ws("|",'.$fspec['field_description'].') as description
+			from `'.$fspec['table'].'`';
+			//echo $sql;
+			mk_select_from_sql_with_description($link,$sql,
 					$fspec['field'],$fspec['fname'],$fspec['fname'],'',$value,$blank='yes');
 		}
 		elseif($fspec['ftype']=='date')
@@ -712,6 +746,18 @@ function mk_select_from_sql($link,$sql,$field_name,$select_name,$select_id,$disa
 	}
 	mk_select_from_array($select_name,$ar,$disabled,$default);
 }
+      
+function mk_select_from_sql_with_description($link,$sql,$field_name,$select_name,$select_id,$disabled='',$default='',$blank='no')
+{
+	//echo '<h1>'.$blank.'</h1>';
+	$ar=mk_array_from_sql_with_description($link,$sql,$field_name);
+	if($blank=='yes')
+	{
+		array_unshift($ar,array("",""));
+	}
+	//print_r( $ar);
+	mk_select_from_array_with_description($select_name,$ar,$disabled,$default);
+}
 
 function mk_array_from_sql($link,$sql,$field_name)
 {
@@ -722,6 +768,36 @@ function mk_array_from_sql($link,$sql,$field_name)
 		$ret[]=$ar[$field_name];
 	}
 	return $ret;
+}
+
+function mk_array_from_sql_with_description($link,$sql,$field_name)
+{
+	$result=run_query($link,$GLOBALS['database'],$sql);
+	$ret=array();
+	while($ar=get_single_row($result))
+	{
+		$ret[]=array($ar[$field_name],$ar['description']);
+	}
+	return $ret;
+}
+
+function mk_select_from_array_with_description($name, $select_array,$disabled='',$default='')
+{	
+	echo '<select  '.$disabled.' name=\''.$name.'\'>';
+	foreach($select_array as $key=>$value)
+	{
+		print_r($value);
+		if($value[0]==$default)
+		{
+			echo '<option  selected value=\''.$value[0].'\' > '.$value[1].'('.$value[0].')'.' </option>';
+		}
+		else
+		{
+			echo '<option value=\''.$value[0].'\' > '.$value[1].'('.$value[0].')'.' </option>';
+		}
+	}
+	echo '</select>';	
+	return TRUE;
 }
 
 
@@ -759,6 +835,19 @@ function file_to_str($link,$file)
 		return false;
 	}
 }
+
+echo "
+<script>
+function sync_with_that(me,that_element_id)
+{
+	//alert(me.getAttribute('data-type'));
+	target=document.getElementById(that_element_id);
+	target.value=me.value
+	var event = new Event('change');
+	target.dispatchEvent(event);
+}
+</script>
+";
 
 function show_source_button($link_element_id,$my_value)
 {
