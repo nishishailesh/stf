@@ -76,18 +76,32 @@ function view_row($link,$tname,$pk,$header='no')
 		{
 			echo '<td>';
 			$fspec=get_field_spec($link,$tname,$k);
-			if($fspec['ftype']=='dtable')
+			if($fspec!==null)
 			{
-				$sql='select 
+				if($fspec['ftype']=='dtable')
+				{
+					$sql='select 
 					distinct `'.$fspec['field'].'` , 
-					concat_ws("|",'.$fspec['field_description'].') as description
-				from `'.$fspec['table'].'` where id=\''.$v.'\'';
-				//echo $sql;
-				$result=run_query($link,$GLOBALS['database'],$sql);
-				$ar=get_single_row($result);
-				//mk_select_from_sql_with_description($link,$sql,
-				//	$fspec['field'],$fspec['fname'],$fspec['fname'],'',$v,$blank='yes');
-			echo '<pre>'.$ar['description'].'('.htmlentities($v).')</pre></td>';
+						concat_ws("|",'.$fspec['field_description'].') as description
+					from `'.$fspec['table'].'` where id=\''.$v.'\'';
+					//echo $sql;
+					$result=run_query($link,$GLOBALS['database'],$sql);
+					$ar=get_single_row($result);
+					if($ar!==null)
+					{
+						//mk_select_from_sql_with_description($link,$sql,
+						//	$fspec['field'],$fspec['fname'],$fspec['fname'],'',$v,$blank='yes');
+						echo '<pre>'.$ar['description'].'('.htmlentities($v).')</pre></td>';
+					}
+					else
+					{
+						echo '<pre>('.htmlentities($v).')</pre></td>';
+					}
+				}
+				else
+				{
+					echo '<pre>'.htmlentities($v).'</pre></td>';
+				}
 			}
 			else
 			{
