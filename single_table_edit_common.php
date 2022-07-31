@@ -12,6 +12,16 @@ function show_manage_single_table_button($tname,$label='')
 	</form></div>';
 }
 
+function single_table_button_with_action($tname,$label='',$action)
+{
+	if(strlen($label)==0){$label=$tname;}
+	echo '<div class="d-inline-block" ><form method=post class=print_hide>
+	<button class="btn btn-outline-primary btn-sm" name=tname value=\''.$tname.'\' >'.$label.'</button>
+	<input type=hidden name=session_name value=\''.$_POST['session_name'].'\'>
+	<input type=hidden name=action value=\''.$action.'\'>
+	</form></div>';
+}
+
 function show_crud_button($tname,$type,$label='')
 {
 	if(strlen($label)==0){$label=$type;}
@@ -211,14 +221,73 @@ function search($link,$tname)
 	echo '</form>';
 }
 
-function select($link,$tname,$join='and')
+
+function view_sql_result_as_table($link,$sql,$show_hide='yes')
+{
+	if(!$result=run_query($link,$GLOBALS['database'],$sql))
+	{
+		 echo '<h1>Problem</h1>';
+		 return false;
+	}
+	display_sql_result_data($result,$show_hide);
+}
+
+	
+function display_sql_result_data($result,$show_hide='yes')
+{
+	echo '<div>';	
+	
+	if($show_hide=='yes')
+	{
+		echo '<button data-toggle="collapse" data-target="#sql_result" class="btn btn-dark">Show/Hide Result</button>';
+		echo '<div id="sql_result" class="collapse show">';		
+	}
+	else
+	{
+		echo '<div>';	
+	}
+	
+       echo '<table border=1 class="table-striped table-hover">';
+					
+			$first_data='yes';
+
+			while($array=get_single_row($result))
+			{
+			//echo '<pre>';
+			//print_r($array);
+                if($first_data=='yes')
+                {
+                        echo '<tr bgcolor=lightgreen>';
+                        foreach($array as $key=>$value)
+                        {
+                                echo '<th>'.$key.'</th>';
+                        }
+                        echo '</tr>';
+                        $first_data='no';
+                }
+                echo '<tr>';
+                foreach($array as $k=>$v)
+                {
+                        echo '<td>'.$v.'</td>';    
+                }
+                echo '</tr>';
+        }
+        echo '</table>';	
+		echo '</div>';
+	echo '</div>';	
+	
+}
+//111119500892
+//one
+
+function select_with_condition($link,$tname,$join='and',$condition,$order_str='')
 {
 	//echo '<pre>';print_r($_POST);echo '</pre>';	
 	$sql='select id from `'.$tname.'` where ';
 	$w='';
 	$ord=' order by ';
 	$ord_base_len=strlen($ord);
-	foreach($_POST  as $k=>$v)
+	foreach($condition  as $k=>$v)
 	{
 		if(!in_array($k,array('action','tname','session_name')))
 		{
@@ -243,7 +312,7 @@ function select($link,$tname,$join='and')
 		{
 			$w=substr($w,0,-3);
 		}
-		$sql=$sql.$w.' order by id desc ';
+		$sql=$sql.$w.$order_str;
 	}
 	else
 	{
@@ -265,6 +334,53 @@ function select($link,$tname,$join='and')
 	echo '</table>';
 }
 
+function select($link,$tname,$join='and',$order_by='')
+{
+	//echo '<pre>';print_r($_POST);echo '</pre>';	
+	$sql='select id from `'.$tname.'` where ';
+	$w='';
+	foreach($_POST  as $k=>$v)
+	{
+		if(!in_array($k,array('action','tname','session_name')))
+		{
+			if(strlen($v)>0)
+			{
+    			$w=$w.' `'.$k.'` like \'%'.$v.'%\' '.$join.' ';
+			}
+		}
+	}
+	
+	if(strlen($w)>0)
+	{
+		if($join=='and')
+		{
+			$w=substr($w,0,-4);
+		}
+		if($join=='or')
+		{
+			$w=substr($w,0,-3);
+		}
+		$sql=$sql.$w.' '.$order_by;
+	}
+	else
+	{
+		//$sql='select id from `'.$tname.'` order by id desc limit '.$GLOBALS['all_records_limit'];
+		$sql='select id from `'.$tname.'` limit '.$GLOBALS['all_records_limit'];
+	}
+	
+	//echo $sql;
+	
+	$result=run_query($link,$GLOBALS['database'],$sql);
+	$all_fields=array();
+	$header='yes';
+	echo '<table class="table table-striped table-sm table-bordered">';
+	while($ar=get_single_row($result))
+	{	
+		view_row($link,$tname,$ar['id'],$header);
+		$header='no';
+	}		
+	echo '</table>';
+}
 
 function ste_id_edit_button($link,$tname,$id)
 {
@@ -310,7 +426,7 @@ function ste_id_update_button($link,$tname,$id)
 	</div>';
 }
 
-function edit($link,$tname,$pk,$header='no')
+function edit_with_readonly($link,$tname,$pk,$header='no',$readonly_array=array())
 {
 	$sql='select * FROM `'.$tname.'` where id=\''.$pk.'\'';
 	//echo $sql;
@@ -342,6 +458,13 @@ function edit($link,$tname,$pk,$header='no')
 						echo $v;
 					echo '</div>';
 				}
+				elseif(in_array($k,$readonly_array))
+				{
+					echo '<div class="border">'.$k.'</div>';
+					echo '<div class="border">';
+					echo '<input class="w-100" type=text  readonly name=\''.$k.'\' value=\''.htmlentities($v,ENT_QUOTES).'\'>';
+					echo '</div>';
+				}
 				else
 				{
 					echo '<div class="border">'.$k.'</div>';
@@ -354,6 +477,170 @@ function edit($link,$tname,$pk,$header='no')
 	echo'</form>';
 
 }
+
+
+
+function edit($link,$tname,$pk,$header='no')
+{
+	$sql='select * FROM `'.$tname.'` where id=\''.$pk.'\'';
+	//echo $sql;
+	$result=run_query($link,$GLOBALS['database'],$sql);
+	$ar=get_single_row($result);
+	
+	echo '<form method=post class="d-inline" enctype="multipart/form-data">';
+	echo '<div class="two_column_one_by_two bg-light">';
+			foreach($ar as $k =>$v)
+			{
+				if(substr(get_field_type($link,$tname,$k),-4)=='blob')
+				{
+					echo '<div class="border">'.$k.'</div>';
+					echo '<div class="border">';
+						echo '<input type=file name=\''.$k.'\' >';
+					echo '</div>';
+				}
+				elseif(in_array($k,array('recording_time','recorded_by','id')))
+				{
+					echo '<div class="border">'.$k.'</div>';
+					echo '<div class="border">';
+						echo $v;
+					echo '</div>';
+				}
+				else
+				{
+					echo '<div class="border">'.$k.'</div>';
+					echo '<div class="border">';
+						read_field($link,$tname,$k,$v);
+					echo '</div>';
+				}
+
+
+			}
+			echo '<div class="border">id</div>';
+			echo '<div class="border">';
+				ste_id_update_button($link,$tname,$ar['id']);
+			echo '</div>';
+			echo '</div>';
+	echo'</form>';
+
+}
+
+
+function add_direct($link,$tname,$header='no')
+{
+	$sql='show columns from `'.$tname.'` ';
+	$result=run_query($link,$GLOBALS['database'],$sql);
+		
+	
+	echo '<form method=post class="d-inline" enctype="multipart/form-data">';
+	echo '<div class="two_column_one_by_two bg-light">';
+			while ( $ar=get_single_row($result))
+			{
+				//print_r($ar);
+				//Array ( [Field] => id [Type] => int(11) [Null] => NO [Key] => PRI [Default] => [Extra] => auto_increment ) 
+				
+				if($ar['Field']=='id')
+				{
+					echo '<div class="border">'.$ar['Field'].'</div>';
+					echo '<div class="border">';
+						echo 'auto';
+					echo '</div>';
+				}
+				elseif(substr($ar['Type'],-4)=='blob')
+				{
+					echo '<div class="border">'.$ar['Field'].'</div>';
+					echo '<div class="border">';
+						echo '<input type=file name=\''.$ar['Field'].'\' >';
+					echo '</div>';
+				}
+				elseif(in_array($ar['Field'],array('recording_time','recorded_by')))
+				{
+					echo '<div class="border">'.$ar['Field'].'</div>';
+					echo '<div class="border">';
+						echo 'auto';
+					echo '</div>';
+				}
+				else
+				{
+					echo '<div class="border">'.$ar['Field'].'</div>';
+					echo '<div class="border">';
+						read_field($link,$tname,$ar['Field'],'');
+					echo '</div>';
+				}
+				
+			}
+
+			echo '</div>';
+
+			echo 
+				'<div class="d-block" >
+					<button type=submit class="btn btn-block btn-outline-success btn-sm m-0 p-0" name=action value=save_insert ><h5>Save</h5></button>
+					<input type=hidden name=session_name value=\''.$_POST['session_name'].'\'>
+					<input type=hidden name=tname value=\''.$tname.'\'>
+				</div>';
+	echo'</form>';
+}
+
+function add_direct_with_default($link,$tname,$header='no',$default=array(),$readonly=array())
+{
+	//print_r($readonly);
+	
+	$sql='show columns from `'.$tname.'` ';
+	$result=run_query($link,$GLOBALS['database'],$sql);
+		
+	echo '<h2>Insert new entry</h2>';
+	echo '<form method=post class="d-inline" enctype="multipart/form-data">';
+	echo '<div class="two_column_one_by_two bg-light">';
+			while ( $ar=get_single_row($result))
+			{
+				//print_r($ar);
+				//Array ( [Field] => id [Type] => int(11) [Null] => NO [Key] => PRI [Default] => [Extra] => auto_increment ) 
+				$defval=isset($default[$ar['Field']])?$default[$ar['Field']]:'';
+				$readonly_val=isset($readonly[ $ar['Field'] ])?'readonly':'';
+				//echo '<h1>'.$readonly_val.'</h1>';
+				if($ar['Field']=='id')
+				{
+					echo '<div class="border">'.$ar['Field'].'</div>';
+					echo '<div class="border">';
+						echo 'auto';
+					echo '</div>';
+				}
+				elseif(substr($ar['Type'],-4)=='blob')
+				{
+					echo '<div class="border">'.$ar['Field'].'</div>';
+					echo '<div class="border">';
+						echo '<input type=file name=\''.$ar['Field'].'\' >';
+					echo '</div>';
+				}
+				elseif(in_array($ar['Field'],array('recording_time','recorded_by')))
+				{
+					echo '<div class="border">'.$ar['Field'].'</div>';
+					echo '<div class="border">';
+						echo 'auto';
+					echo '</div>';
+				}
+				else
+				{
+					echo '<div class="border">'.$ar['Field'].'</div>';
+					echo '<div class="border">';				
+						read_field($link,$tname,$ar['Field'],$defval,'no',$readonly_val);
+					echo '</div>';
+				}
+				
+			}
+
+			echo '</div>';
+
+			echo 
+				'<div class="d-block" >
+					<button type=submit class="btn btn-block btn-outline-success btn-sm m-0 p-0" name=action value=save_insert ><h5>Save</h5></button>
+					<input type=hidden name=session_name value=\''.$_POST['session_name'].'\'>
+					<input type=hidden name=tname value=\''.$tname.'\'>
+				</div>';
+				 
+	echo'</form>';
+
+}
+
 
 function edit_old($link,$tname,$pk,$header='no')
 {
@@ -484,8 +771,10 @@ function get_field_spec($link,$tname,$fname)
 	return $ar=get_single_row($result);	//return only first row, if mutiple, only forst one is returned
 }
 
-function read_field($link,$tname,$field,$value,$search='no')
+function read_field($link,$tname,$field,$value,$search='no',$readonly='')
 {
+	//echo '<h1>'.$readonly.'</h1>';
+
 	$ftype=get_field_details($link,$tname,$field);
 	$fspec=get_field_spec($link,$tname,$field);
 	//print_r($fspec);
@@ -493,24 +782,35 @@ function read_field($link,$tname,$field,$value,$search='no')
 	{
 		if($fspec['ftype']=='table')
 		{
-			mk_select_from_sql($link,'select distinct `'.$fspec['field'].'` from `'.$fspec['table'].'`',
-					$fspec['field'],$fspec['fname'],$fspec['fname'],'',$value,$blank='yes');
+			if($readonly!='readonly')
+			{
+				mk_select_from_sql($link,'select distinct `'.$fspec['field'].'` from `'.$fspec['table'].'`',
+				$fspec['field'],$fspec['fname'],$fspec['fname'],'',$value,$blank='yes');
+			}
+			else
+			{
+				echo '<input class="w-100" type=text  '.$readonly.' name=\''.$field.'\' value=\''.htmlentities($value,ENT_QUOTES).'\'>';
+			}
 		}
 		else if($fspec['ftype']=='dtable')
 		{
+			//if($readonly!='readonly')
+			//{
 			$sql='select 
 				distinct `'.$fspec['field'].'` , 
 				concat_ws("|",'.$fspec['field_description'].') as description
-			from `'.$fspec['table'].'`';
+			from `'.$fspec['table'].'`
+			order by '.$fspec['field_description'];
 			//echo $sql;
 			mk_select_from_sql_with_description($link,$sql,
-					$fspec['field'],$fspec['fname'],$fspec['fname'],'',$value,$blank='yes');
+					$fspec['field'],$fspec['fname'],$fspec['fname'],'',$value,$blank='yes',$readonly);
+			echo '<input placeholder="enter search string" type=text id=\'input_for_'.$fspec['fname'].'\' onchange="find_from_dd(this , \''.$fspec['fname'].'\');">';
 		}
 		elseif($fspec['ftype']=='date')
 		{
 			if($search=='yes')
 			{
-				echo '<input type=text name=\''.$field.'\' value=\''.$value.'\'>';
+				echo '<input type=text '.$readonly.' name=\''.$field.'\' value=\''.$value.'\'>';
 			}
 			else
 			{
@@ -527,14 +827,14 @@ function read_field($link,$tname,$field,$value,$search='no')
 			}
 			else
 			{
-				echo '<input type=time id=\''.$field.'\' name=\''.$field.'\' value=\''.$value.'\'>';
+				echo '<input type=time id=\''.$field.'\'  '.$readonly.' name=\''.$field.'\' value=\''.$value.'\'>';
 				$default=strftime("%H:%M");
 				show_source_button($field,$default);
 			}
 		}				
 		elseif($fspec['ftype']=='textarea')
 		{
-			echo '<pre><textarea class="w-100" name=\''.$field.'\' >'.$value.'</textarea></pre>';
+			echo '<pre><textarea class="w-100"  '.$readonly.' name=\''.$field.'\' >'.$value.'</textarea></pre>';
 		}	
 		else
 		{
@@ -543,7 +843,7 @@ function read_field($link,$tname,$field,$value,$search='no')
 	}
 	else
 	{
-		echo '<input class="w-100" type=text name=\''.$field.'\' value=\''.htmlentities($value,ENT_QUOTES).'\'>';
+		echo '<input class="w-100" type=text  '.$readonly.' name=\''.$field.'\' value=\''.htmlentities($value,ENT_QUOTES).'\'>';
 	}
 }
 
@@ -638,6 +938,28 @@ function update($link,$tname)
 	}	
 }
 
+
+
+function update_from_array($link,$tname,$post)
+{
+	foreach($post as $k=>$v)
+	{
+		if(!in_array($k,array('action','tname','session_name','id','recording_time','recorded_by')))
+		{
+			//echo $k.'#<br>';
+			update_one_field($link,$tname,$k,$post['id']);
+		}
+	}
+	foreach($_FILES as $k=>$v)
+	{
+		if(!in_array($k,array('action','tname','session_name','id','recording_time','recorded_by')))
+		{
+			update_one_field_blob($link,$tname,$k,$k.'_name',$post['id']);
+		}
+	}	
+}
+
+
 function list_available_tables($link)
 {
 	$sql_level='select distinct level from '.$GLOBALS['record_tables'].' order by level';
@@ -657,9 +979,10 @@ function list_available_tables($link)
 	}
 }
 
-function manage_stf($link,$post)
+function manage_stf($link,$post,$show_crud='yes')
 {
-	if(isset($post['tname']))
+	
+	if(isset($post['tname']) && $show_crud=='yes')
 	{
 		echo '<div class="border border-dark m-2 p-2" >';
 		echo '<h3>'.$post['tname'].': Choose any action below</h3>';
@@ -761,16 +1084,16 @@ function mk_select_from_sql($link,$sql,$field_name,$select_name,$select_id,$disa
 	mk_select_from_array($select_name,$ar,$disabled,$default);
 }
       
-function mk_select_from_sql_with_description($link,$sql,$field_name,$select_name,$select_id,$disabled='',$default='',$blank='no')
+function mk_select_from_sql_with_description($link,$sql,$field_name,$select_name,$select_id,$disabled='',$default='',$blank='no',$readonly='')
 {
-	//echo '<h1>'.$blank.'</h1>';
+	//echo '<h1>++'.$readonly.'</h1>';
 	$ar=mk_array_from_sql_with_description($link,$sql,$field_name);
 	if($blank=='yes')
 	{
 		array_unshift($ar,array("",""));
 	}
 	//print_r( $ar);
-	mk_select_from_array_with_description($select_name,$ar,$disabled,$default);
+	mk_select_from_array_with_description($select_name,$ar,$disabled,$default,$readonly);
 }
 
 function mk_array_from_sql($link,$sql,$field_name)
@@ -795,12 +1118,32 @@ function mk_array_from_sql_with_description($link,$sql,$field_name)
 	return $ret;
 }
 
-function mk_select_from_array_with_description($name, $select_array,$disabled='',$default='')
+function mk_select_from_array_with_description($name, $select_array,$disabled='',$default='',$readonly='')
 {	
-	echo '<select  '.$disabled.' name=\''.$name.'\'>';
+	//echo '<h1>--'.$readonly.'--</h1>';
+	if($readonly=='readonly')
+	{
+		foreach($select_array as $key=>$value)
+		{
+			if($value[0]==$default)
+			{
+				echo '<input type=hidden '.$readonly.' name=\''.$name.'\' id=\''.$name.'\'  value=\''.$default.'\'>';
+				echo $value[1].'('.$value[0].')';
+			}
+			else
+			{
+
+			}
+		}
+	
+
+		return TRUE;
+	}
+	
+	echo '<select  '.$disabled.'  id=\''.$name.'\'   name=\''.$name.'\'>';
 	foreach($select_array as $key=>$value)
 	{
-		print_r($value);
+		//print_r($value);
 		if($value[0]==$default)
 		{
 			echo '<option  selected value=\''.$value[0].'\' > '.$value[1].'('.$value[0].')'.' </option>';
@@ -850,18 +1193,6 @@ function file_to_str($link,$file)
 	}
 }
 
-echo "
-<script>
-function sync_with_that(me,that_element_id)
-{
-	//alert(me.getAttribute('data-type'));
-	target=document.getElementById(that_element_id);
-	target.value=me.value
-	var event = new Event('change');
-	target.dispatchEvent(event);
-}
-</script>
-";
 
 function show_source_button($link_element_id,$my_value)
 {
@@ -873,4 +1204,14 @@ function show_source_button($link_element_id,$my_value)
 				value=\''.$my_value.'\'>'.$my_value.'</button>';
 }
 
+function show_button_with_pk($tname,$type,$pk,$label='',$target='',$action='')
+{
+	if(strlen($label)==0){$label=$type;}
+	echo '<div class="d-inline-block" ><form '.$action.' method=post '.$target.' class=print_hide>
+	<button class="btn btn-outline-primary btn-sm" name=action value=\''.$type.'\' >'.$label.'('.$pk.')</button>
+	<input type=hidden name=session_name value=\''.$_POST['session_name'].'\'>
+	<input type=hidden name=tname value=\''.$tname.'\'>
+	<input type=hidden name=id value=\''.$pk.'\'>
+	</form></div>';
+}
 ?>

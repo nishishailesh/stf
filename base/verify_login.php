@@ -187,7 +187,7 @@ function read_new_passoword()
 
 function get_user_info($link,$user)
 {
-	$sql='select * from user where user=\''.$user.'\'';
+	$sql='select * from  `'.$GLOBALS['user_table'].'` where `'.$GLOBALS['user_id'].'`=\''.$user.'\'';
 	$result=run_query($link,$GLOBALS['database'],$sql);
 	return get_single_row($result);
 }
