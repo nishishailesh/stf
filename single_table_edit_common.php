@@ -48,7 +48,7 @@ function add_without_display($link,$tname)
 	return $id=last_autoincrement_insert($link);
 }
 
-function view_row($link,$tname,$pk,$header='no')
+function view_row($link,$tname,$pk,$header='no',$extra_button=array())
 {
 	$sql='select * FROM `'.$tname.'` where id=\''.$pk.'\'';
 	//echo $sql;
@@ -74,6 +74,19 @@ function view_row($link,$tname,$pk,$header='no')
 			<td>';
 				ste_id_edit_button($link,$tname,$v);
 				ste_id_delete_button($link,$tname,$v);
+				foreach($extra_button as $eb)
+				{
+					//echo_extra_button($link,$tname,$k,$extra_button['action']);
+					show_button_with_pk(
+								$tname,
+								$eb['type'],
+								$pk,
+								$label=$eb['label'],
+								$target=$eb['target'],
+								$action=$eb['action']
+								);
+				}
+				
 			echo '<span class="round round-0 bg-warning" >'.$v.'</span></td>';
 		}
 		elseif(substr(get_field_type($link,$tname,$k),-4)=='blob')
@@ -334,7 +347,22 @@ function select_with_condition($link,$tname,$join='and',$condition,$order_str=''
 	echo '</table>';
 }
 
-function select($link,$tname,$join='and',$order_by='')
+
+function select_sql($link,$tname,$sql_for_id,$extra_button=array())
+{
+	$result=run_query($link,$GLOBALS['database'],$sql_for_id);
+	$all_fields=array();
+	$header='yes';
+	echo '<table class="table table-striped table-sm table-bordered">';
+	while($ar=get_single_row($result))
+	{	
+		view_row($link,$tname,$ar['id'],$header,$extra_button);
+		$header='no';
+	}		
+	echo '</table>';
+}
+
+function select($link,$tname,$join='and',$order_by='',$extra=array())
 {
 	//echo '<pre>';print_r($_POST);echo '</pre>';	
 	$sql='select id from `'.$tname.'` where ';
@@ -376,7 +404,7 @@ function select($link,$tname,$join='and',$order_by='')
 	echo '<table class="table table-striped table-sm table-bordered">';
 	while($ar=get_single_row($result))
 	{	
-		view_row($link,$tname,$ar['id'],$header);
+		view_row($link,$tname,$ar['id'],$header,$extra,);
 		$header='no';
 	}		
 	echo '</table>';
@@ -962,6 +990,7 @@ function update_from_array($link,$tname,$post)
 
 function list_available_tables($link)
 {
+	echo '<div class="bg-light">';
 	$sql_level='select distinct level from '.$GLOBALS['record_tables'].' order by level';
 	$result_level=run_query($link,$GLOBALS['database'],$sql_level);
 	echo '<h3>List of Available Tables</h3>';
@@ -977,9 +1006,10 @@ function list_available_tables($link)
 		}
 		echo '<hr>';
 	}
+	echo '</div>';
 }
 
-function manage_stf($link,$post,$show_crud='yes')
+function manage_stf($link,$post,$show_crud='yes',$extra=array(),$order_by='order by  id desc ')
 {
 	
 	if(isset($post['tname']) && $show_crud=='yes')
@@ -998,7 +1028,7 @@ function manage_stf($link,$post,$show_crud='yes')
 	if($post['action']=='add')
 	{
 		echo '<h5>'.$post['action'].'</h5>';
-		add($link,$post['tname']);
+		add_direct_with_default($link,$post['tname']);
 	}
 
 	//B done
@@ -1032,7 +1062,7 @@ function manage_stf($link,$post,$show_crud='yes')
 		echo '<h5>updated at '.strftime("%Y-%m-%d %H:%M:%S").'</h5>';
 		
 		echo '<table class="table table-striped table-sm table-bordered">';
-			view_row($link,$post['tname'],$post['id'],'yes');
+			view_row($link,$post['tname'],$post['id'],'yes',$extra);
 		echo '</table>';
 		
 	}
@@ -1041,19 +1071,19 @@ function manage_stf($link,$post,$show_crud='yes')
 	elseif($post['action']=='and_select')
 	{
 		echo '<h5>'.$post['action'].'</h5>';	
-		select($link,$post['tname']);
+		select($link,$post['tname'],$join='and',$order_by,$extra);
 	}
 	//3b done
 	elseif($post['action']=='or_select')
 	{
 		echo '<h5>'.$post['action'].'</h5>';	
-		select($link,$post['tname'],$join='or');
+		select($link,$post['tname'],$join='or',$order_by,$extra);
 	}
 	//3c
 	elseif($post['action']=='list')
 	{
 		echo '<h5>'.$post['action'].'</h5>';	
-		select($link,$post['tname']);
+		select($link,$post['tname'],$join='and',$order_by,$extra);
 	}
 
 	//4 done
@@ -1071,7 +1101,10 @@ function manage_stf($link,$post,$show_crud='yes')
 	
 }
 
-
+function insert_direct_with_default($link,$tname)
+{
+		
+}
 
 function mk_select_from_sql($link,$sql,$field_name,$select_name,$select_id,$disabled='',$default='',$blank='no')
 {
@@ -1204,6 +1237,7 @@ function show_source_button($link_element_id,$my_value)
 				value=\''.$my_value.'\'>'.$my_value.'</button>';
 }
 
+
 function show_button_with_pk($tname,$type,$pk,$label='',$target='',$action='')
 {
 	if(strlen($label)==0){$label=$type;}
@@ -1214,4 +1248,5 @@ function show_button_with_pk($tname,$type,$pk,$label='',$target='',$action='')
 	<input type=hidden name=id value=\''.$pk.'\'>
 	</form></div>';
 }
+
 ?>

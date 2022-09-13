@@ -9,68 +9,35 @@ $link=get_link($GLOBALS['main_user'],$GLOBALS['main_pass']);
 $user=get_user_info($link,$_SESSION['login']);
 //$auth=explode(',',$user['authorization']);
 //print_r($auth);
-if(isset($_POST['date']))
+
+if($_POST['tname']=='outward')
 {
-	$show_date=$_POST['date'];	
+	$extra=array
+		(
+			['type'=>'print_lable','label'=>'','target'=>' target=_blank ','action'=>'action=print_lable.php']
+		);
 }
 else
 {
-	$show_date=date("Y-m-d");
+	$extra=array();
 }
 
-list_available_tables($link);
+echo '<div class="two_column_one_by_two">';
+	echo '<div>';
+		list_available_tables($link);
+	echo '</div><div>';
+		manage_stf($link,$_POST,$show_crud='yes',$extra,$order_by='order by  id desc ');
+	echo '</div>';
+echo '</div>';
 
-manage_stf($link,$_POST);
+//select_sql($link,'outward','select * from outward order by id desc limit 30',$extra);
 
-	$sql='
-(	
-select 
-	i.id,i.date,f.food_item,i.gm,
-	round((f.calories*i.gm)/f.weight,0) as Calories,
-	round((f.calories*i.gm)/f.weight,0) as Calories,
-	round((f.protein*i.gm)/f.weight,1) as Protein,
-	round((f.potassium*i.gm)/f.weight,0) as Potassium,
-	round((f.phosphorus*i.gm)/f.weight,0) as Phosphorus,
-	round((f.calcium*i.gm)/f.weight,0) as Calcium,
-	round((f.sodium*i.gm)/f.weight,0) as Sodium,
-	round((f.fat*i.gm)/f.weight,1) as Fat,
-	round((f.carbohydrate*i.gm)/f.weight,1) as Carbohydrate,
-	round((f.fiber*i.gm)/f.weight,1) as Fiber,
-	i.remark
-	from myfood f, intake i
-			where 
-					date=\''.$show_date.'\'
-					and
-					f.id=i.food_id
-					
-)					
-	union				
-(					
-select 
-	"Grand","Total","For","'.$show_date.'",
-	round(sum((f.calories*i.gm)/f.weight) ,0) as  Calories,
-	round(sum((f.calories*i.gm)/f.weight) ,0) as  Calories,
-	round(sum((f.protein*i.gm)/f.weight) ,1) as  Protein,
-	round(sum((f.potassium*i.gm)/f.weight) ,0) as Potassium,
-	round(sum((f.phosphorus*i.gm)/f.weight) ,0) as  Phosphorus,
-	round(sum((f.calcium*i.gm)/f.weight) ,0) as  Calcium,
-	round(sum((f.sodium*i.gm)/f.weight) ,0) as  Sodium,
-	round(sum((f.fat*i.gm)/f.weight) ,1) as  Fat,
-	round(sum((f.carbohydrate*i.gm)/f.weight) ,1) as  Carbohydrate,
-	round(sum((f.fiber*i.gm)/f.weight) ,1) as  Fiber,
-	""
-	from myfood f, intake i
-			where 
-					date=\''.$show_date.'\'
-					and
-					f.id=i.food_id					
-					
-					
-					
-)					';
+/*
+$sql='select id,date,outward_no,outword_to,Description from outward order by id desc';
 	//echo $sql;
 	echo '<h4 class="bg-info">Food intake on '.$show_date.'</h4>';
 	view_sql_result_as_table($link,$sql,$show_hide='no');
+*/
 
 echo '
 <h5 class="bg-warning" data-toggle="collapse" data-target="#help" >Help</h5>
@@ -89,7 +56,7 @@ echo '
 //////////////user code ends////////////////
 tail();
 
-//echo '<pre>';print_r($_POST);print_r($_FILES);echo '</pre>';
+echo '<pre>';print_r($_POST);print_r($_FILES);echo '</pre>';
 
 //////////////Functions///////////////////////
 

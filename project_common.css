@@ -139,5 +139,5 @@
 .two_column_one_by_two
 {
   display: grid;
-  grid-template-columns: 33% 67%;
+  grid-template-columns: 15% 85%;
 }
