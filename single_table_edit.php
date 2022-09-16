@@ -10,12 +10,19 @@ $user=get_user_info($link,$_SESSION['login']);
 //$auth=explode(',',$user['authorization']);
 //print_r($auth);
 
-if($_POST['tname']=='outward')
+if(isset($_POST['tname']))
 {
-	$extra=array
+	if($_POST['tname']=='outword')
+	{
+		$extra=array
 		(
 			['type'=>'print_lable','label'=>'','target'=>' target=_blank ','action'=>'action=print_lable.php']
 		);
+	}
+	else
+	{
+		$extra=array();
+	}
 }
 else
 {
@@ -26,18 +33,9 @@ echo '<div class="two_column_one_by_two">';
 	echo '<div>';
 		list_available_tables($link);
 	echo '</div><div>';
-		manage_stf($link,$_POST,$show_crud='yes',$extra,$order_by='order by  id desc ');
+		manage_stf($link,$_POST,$show_crud='yes',$extra,$order_by=' order by  id desc ');
 	echo '</div>';
 echo '</div>';
-
-//select_sql($link,'outward','select * from outward order by id desc limit 30',$extra);
-
-/*
-$sql='select id,date,outward_no,outword_to,Description from outward order by id desc';
-	//echo $sql;
-	echo '<h4 class="bg-info">Food intake on '.$show_date.'</h4>';
-	view_sql_result_as_table($link,$sql,$show_hide='no');
-*/
 
 echo '
 <h5 class="bg-warning" data-toggle="collapse" data-target="#help" >Help</h5>
@@ -56,7 +54,7 @@ echo '
 //////////////user code ends////////////////
 tail();
 
-echo '<pre>';print_r($_POST);print_r($_FILES);echo '</pre>';
+//echo '<pre>';print_r($_POST);print_r($_FILES);echo '</pre>';
 
 //////////////Functions///////////////////////
 

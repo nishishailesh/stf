@@ -136,8 +136,10 @@
   grid-template-columns: auto auto auto auto;
 }
 
+
 .two_column_one_by_two
 {
   display: grid;
-  grid-template-columns: 15% 85%;
+  grid-template-columns: 10% 90%;
 }
+
